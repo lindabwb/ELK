@@ -1,0 +1,23 @@
+Bootstrap: scratch
+
+%setup
+    mkdir -p $SINGULARITY_ROOTFS/usr/share/elasticsearch
+    mkdir -p $SINGULARITY_ROOTFS/usr/share/kibana
+
+%files
+    elasticsearch.zip /usr/share/elasticsearch/
+    kibana.zip /usr/share/kibana/
+
+%post
+    apt-get update
+    apt-get install -y unzip
+
+    cd /usr/share/elasticsearch
+    unzip elasticsearch.zip
+
+    cd /usr/share/kibana
+    unzip kibana.zip
+
+%runscript
+    /usr/share/elasticsearch/bin/elasticsearch &
+    /usr/share/kibana/bin/kibana
