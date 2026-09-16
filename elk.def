@@ -1,23 +1,30 @@
-Bootstrap: scratch
-
-%setup
-    mkdir -p $SINGULARITY_ROOTFS/usr/share/elasticsearch
-    mkdir -p $SINGULARITY_ROOTFS/usr/share/kibana
-
-%files
-    elasticsearch.zip /usr/share/elasticsearch/
-    kibana.zip /usr/share/kibana/
+Bootstrap: docker
+From: docker.elastic.co/elasticsearch/elasticsearch:9.5.3
 
 %post
-    apt-get update
-    apt-get install -y unzip
+    mkdir -p /data
+    cat > /usr/share/elasticsearch/config/elasticsearch.yml <<'EOF'
+network.host: 127.0.0.1
+http.port: 9201
+discovery.type: single-node
+path.data: /data/elasticsearch
+path.logs: /data/logs
+xpack.security.enabled: false
+EOF
 
-    cd /usr/share/elasticsearch
-    unzip elasticsearch.zip
+Bootstrap: docker
+From: docker.elastic.co/kibana/kibana:9.5.3
 
-    cd /usr/share/kibana
-    unzip kibana.zip
+%post
+    cat > /opt/kibana/config/kibana.yml <<'EOF'
+server.host: 127.0.0.1
+server.port: 5602
+elasticsearch.hosts: ["http://127.0.0.1:9201"]
+path.data: /data/kibana
+EOF
 
-%runscript
-    /usr/share/elasticsearch/bin/elasticsearch &
-    /usr/share/kibana/bin/kibana
+%startscript
+    mkdir -p /data/elasticsearch /data/kibana /data/logs
+    /usr/share/elasticsearch/bin/elasticsearch >> /data/logs/elasticsearch.log 2>&1 &
+    /opt/kibana/bin/kibana >> /data/logs/kibana.log 2>&1 &
+    wait
